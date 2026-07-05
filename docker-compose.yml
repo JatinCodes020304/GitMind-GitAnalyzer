@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gitmind-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8080
+      - CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - gitmind-network
+
+  # Frontend is served as a static site (built and deployed separately)
+  # For local development, use: cd app && npm run dev
+
+networks:
+  gitmind-network:
+    driver: bridge
