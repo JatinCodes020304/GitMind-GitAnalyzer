@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Landing from "@/pages/Landing";
 import SearchPage from "@/pages/Search";
 import Dashboard from "@/pages/Dashboard";
+import ComparePage from "@/pages/Compare";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,6 +21,8 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/dashboard/:username" element={<Dashboard />} />
+        <Route path="/compare" element={<ComparePage />} />
+        <Route path="/compare/:userA/:userB" element={<ComparePage />} />
         <Route
           path="*"
           element={

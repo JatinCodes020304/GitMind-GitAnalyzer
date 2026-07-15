@@ -36,8 +36,11 @@ public class GitHubApiClient {
     private final GitHubProperties githubProperties;
 
     private static final String USERS_ENDPOINT = "/users/%s";
-    private static final String REPOS_ENDPOINT = "/users/%s/repos?per_page=100&sort=updated";
+    private static final String REPOS_ENDPOINT = "/users/%s/repos?per_page=100&sort=updated&page=%d";
     private static final String EVENTS_ENDPOINT = "/users/%s/events/public?per_page=30";
+
+    /** Safety cap on pages fetched so a pathological account can't make this loop forever. */
+    private static final int MAX_REPO_PAGES = 10; // up to 1000 repos
 
     /**
      * Fetches a GitHub user's profile information.
@@ -76,13 +79,28 @@ public class GitHubApiClient {
      */
     public List<GitHubRepository> fetchUserRepositories(String username) {
         log.debug("Fetching repositories for user: {}", username);
-        String url = buildUrl(String.format(REPOS_ENDPOINT, username));
-        
+
+        List<GitHubRepository> allRepos = new java.util.ArrayList<>();
+
         try {
-            ResponseEntity<List<GitHubRepository>> response = restTemplate.exchange(
-                    url, HttpMethod.GET, createHttpEntity(), 
-                    new ParameterizedTypeReference<>() {});
-            return response.getBody() != null ? response.getBody() : Collections.emptyList();
+            for (int page = 1; page <= MAX_REPO_PAGES; page++) {
+                String url = buildUrl(String.format(REPOS_ENDPOINT, username, page));
+
+                ResponseEntity<List<GitHubRepository>> response = restTemplate.exchange(
+                        url, HttpMethod.GET, createHttpEntity(),
+                        new ParameterizedTypeReference<>() {});
+
+                List<GitHubRepository> pageResults = response.getBody() != null
+                        ? response.getBody() : Collections.emptyList();
+
+                allRepos.addAll(pageResults);
+
+                // GitHub returns fewer than per_page results on the last page
+                if (pageResults.size() < 100) {
+                    break;
+                }
+            }
+            return allRepos;
         } catch (HttpClientErrorException.NotFound ex) {
             throw new GitHubUserNotFoundException(username);
         } catch (HttpClientErrorException.Forbidden ex) {
@@ -129,6 +147,10 @@ public class GitHubApiClient {
         HttpHeaders headers = new HttpHeaders();
         headers.set("User-Agent", githubProperties.getUserAgent());
         headers.set("Accept", "application/vnd.github.v3+json");
+        String token = githubProperties.getToken();
+        if (token != null && !token.isBlank()) {
+            headers.set("Authorization", "Bearer " + token);
+        }
         return new HttpEntity<>(headers);
     }
 

@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useGitHubAnalysis } from "@/hooks/useGitHubAnalysis";
+import { useContributionCalendar } from "@/hooks/useContributionCalendar";
 import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import DashboardSkeleton from "@/components/skeletons/DashboardSkeleton";
@@ -9,6 +10,7 @@ import LanguageChart from "@/components/LanguageChart";
 import RepositoryList from "@/components/RepositoryList";
 import ActivityFeed from "@/components/ActivityFeed";
 import ErrorState from "@/components/ErrorState";
+import ContributionHeatmap from "@/components/ContributionHeatmap";
 import { useEffect } from "react";
 
 export default function Dashboard() {
@@ -21,6 +23,11 @@ export default function Dashboard() {
     error,
     refetch,
   } = useGitHubAnalysis(username || null);
+
+  // Heatmap is fetched separately and fails independently - a missing
+  // GITHUB_TOKEN on the server shouldn't take down the whole dashboard.
+  const { data: contributions, isLoading: contributionsLoading } =
+    useContributionCalendar(username || null);
 
   // Scroll to top on mount
   useEffect(() => {
@@ -94,6 +101,12 @@ export default function Dashboard() {
                   <div className="text-xs text-slate-500">Top Language</div>
                 </div>
               </div>
+
+              {/* Contribution Heatmap */}
+              {contributionsLoading && (
+                <div className="rounded-xl border border-slate-800/60 bg-slate-900/40 p-5 h-40 animate-pulse" />
+              )}
+              {contributions && <ContributionHeatmap calendar={contributions} />}
 
               {/* Language Chart + Repositories */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

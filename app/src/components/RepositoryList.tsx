@@ -1,10 +1,14 @@
-import { Star, GitFork, AlertCircle, Clock, ChevronRight } from "lucide-react";
+import { Star, GitFork, AlertCircle, Clock, ChevronRight, Search } from "lucide-react";
 import type { Repository } from "@/types/github";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface RepositoryListProps {
   repositories: Repository[];
 }
+
+type SortOption = "updated" | "stars" | "name";
+
+const PAGE_SIZE = 12;
 
 const LANGUAGE_COLORS: Record<string, string> = {
   JavaScript: "bg-yellow-500/20 text-yellow-400",
@@ -48,10 +52,45 @@ function formatRelativeTime(dateString: string): string {
 }
 
 export default function RepositoryList({ repositories }: RepositoryListProps) {
-  const [showAll, setShowAll] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("updated");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-  const displayedRepos = showAll ? repositories : repositories.slice(0, 8);
-  const hasMore = repositories.length > 8;
+  const filteredSorted = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    let result = repositories;
+
+    if (term) {
+      result = result.filter(
+        (r) =>
+          r.name.toLowerCase().includes(term) ||
+          (r.language && r.language.toLowerCase().includes(term)) ||
+          (r.description && r.description.toLowerCase().includes(term))
+      );
+    }
+
+    result = [...result].sort((a, b) => {
+      if (sortBy === "stars") return b.stargazersCount - a.stargazersCount;
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      // "updated"
+      return new Date(b.pushedAt).getTime() - new Date(a.pushedAt).getTime();
+    });
+
+    return result;
+  }, [repositories, search, sortBy]);
+
+  const displayedRepos = filteredSorted.slice(0, visibleCount);
+  const hasMore = filteredSorted.length > visibleCount;
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setVisibleCount(PAGE_SIZE); // reset pagination when filters change
+  };
+
+  const handleSortChange = (value: SortOption) => {
+    setSortBy(value);
+    setVisibleCount(PAGE_SIZE);
+  };
 
   if (!repositories || repositories.length === 0) {
     return (
@@ -69,11 +108,39 @@ export default function RepositoryList({ repositories }: RepositoryListProps) {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-white">Repositories</h3>
         <span className="text-sm text-slate-500">
-          {repositories.length} total
+          {search ? `${filteredSorted.length} of ${repositories.length}` : `${repositories.length} total`}
         </span>
       </div>
 
-      <div className="space-y-3 max-h-[600px] overflow-y-auto pr-1 custom-scrollbar">
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Search repos by name, language, description..."
+            className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-800/60 bg-slate-800/20 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-slate-600 transition-colors"
+          />
+        </div>
+        <select
+          value={sortBy}
+          onChange={(e) => handleSortChange(e.target.value as SortOption)}
+          className="px-3 py-2 rounded-lg border border-slate-800/60 bg-slate-800/20 text-sm text-slate-300 focus:outline-none focus:border-slate-600 transition-colors"
+        >
+          <option value="updated">Recently updated</option>
+          <option value="stars">Most stars</option>
+          <option value="name">Name (A-Z)</option>
+        </select>
+      </div>
+
+      {filteredSorted.length === 0 && (
+        <div className="text-center py-12 text-slate-500 text-sm">
+          No repositories match "{search}"
+        </div>
+      )}
+
+      <div className="space-y-3 pr-1">
         {displayedRepos.map((repo) => (
           <a
             key={repo.id}
@@ -147,12 +214,19 @@ export default function RepositoryList({ repositories }: RepositoryListProps) {
 
       {hasMore && (
         <button
-          onClick={() => setShowAll(!showAll)}
+          onClick={() => setVisibleCount((c) => c + PAGE_SIZE)}
           className="w-full mt-4 py-2.5 rounded-xl border border-slate-700/50 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all duration-200"
         >
-          {showAll
-            ? "Show less"
-            : `Show all ${repositories.length} repositories`}
+          Load {Math.min(PAGE_SIZE, filteredSorted.length - visibleCount)} more
+          ({filteredSorted.length - visibleCount} remaining)
+        </button>
+      )}
+      {!hasMore && visibleCount > PAGE_SIZE && filteredSorted.length > PAGE_SIZE && (
+        <button
+          onClick={() => setVisibleCount(PAGE_SIZE)}
+          className="w-full mt-4 py-2.5 rounded-xl border border-slate-700/50 text-sm text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all duration-200"
+        >
+          Show less
         </button>
       )}
     </div>

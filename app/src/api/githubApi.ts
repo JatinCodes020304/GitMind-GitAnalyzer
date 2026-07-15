@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { GitHubAnalysis, ApiError } from "@/types/github";
+import type { GitHubAnalysis, ApiError, ContributionCalendar } from "@/types/github";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
@@ -13,6 +13,11 @@ const apiClient = axios.create({
 
 export async function fetchGitHubAnalysis(username: string): Promise<GitHubAnalysis> {
   const response = await apiClient.get<GitHubAnalysis>(`/api/github/${username}`);
+  return response.data;
+}
+
+export async function fetchContributionCalendar(username: string): Promise<ContributionCalendar> {
+  const response = await apiClient.get<ContributionCalendar>(`/api/github/${username}/contributions`);
   return response.data;
 }
 

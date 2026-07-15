@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Github, Search, Home, BarChart3 } from "lucide-react";
+import { Github, Search, Home, BarChart3, Swords } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
@@ -11,6 +11,7 @@ export default function Navbar() {
   const navLinks = [
     { path: "/", label: "Home", icon: Home },
     { path: "/search", label: "Analyze", icon: Search },
+    { path: "/compare", label: "Compare", icon: Swords },
   ];
 
   return (

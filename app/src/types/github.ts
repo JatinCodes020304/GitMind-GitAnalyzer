@@ -84,6 +84,21 @@ export interface GitHubAnalysis {
   recentEvents: Event[];
 }
 
+export interface ContributionDay {
+  date: string;
+  count: number;
+  level: number;
+}
+
+export interface ContributionCalendar {
+  totalContributions: number;
+  currentStreak: number;
+  longestStreak: number;
+  busiestDay: string;
+  busiestDayCount: number;
+  days: ContributionDay[];
+}
+
 export interface ApiError {
   timestamp: string;
   status: number;

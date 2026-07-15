@@ -1,6 +1,8 @@
     package com.gitmind.controller;
 
+    import com.gitmind.dto.ContributionCalendarDto;
     import com.gitmind.dto.GitHubAnalysisDto;
+    import com.gitmind.service.ContributionService;
     import com.gitmind.service.GitHubAnalysisService;
     import lombok.RequiredArgsConstructor;
     import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@
     public class GitHubController {
 
         private final GitHubAnalysisService analysisService;
+        private final ContributionService contributionService;
 
         /**
          * Analyzes a GitHub user's profile and returns comprehensive data.
@@ -37,6 +40,26 @@
             }
             
             GitHubAnalysisDto result = analysisService.analyzeUser(username);
+            return ResponseEntity.ok(result);
+        }
+
+        /**
+         * Returns the user's contribution calendar (the commit heatmap),
+         * covering the trailing 12 months, plus current/longest streak stats.
+         *
+         * @param username the GitHub username to fetch contributions for
+         * @return contribution calendar with daily counts and streaks
+         */
+        @GetMapping("/{username}/contributions")
+        public ResponseEntity<ContributionCalendarDto> getContributions(@PathVariable String username) {
+            log.info("Received contribution calendar request for user: {}", username);
+
+            if (!isValidUsername(username)) {
+                log.warn("Invalid username format: {}", username);
+                return ResponseEntity.badRequest().build();
+            }
+
+            ContributionCalendarDto result = contributionService.getContributionCalendar(username);
             return ResponseEntity.ok(result);
         }
 
